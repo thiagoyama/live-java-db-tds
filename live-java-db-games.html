@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java + DB | LIVE CODING 🎮</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --green: #00ff88;
+    --cyan: #00e5ff;
+    --yellow: #ffe600;
+    --red: #ff3366;
+    --purple: #bf00ff;
+    --orange: #ff9500;
+    --card: #12121f;
+    --border: #1e1e35;
+    --text: #d0d0e8;
+    --dim: #666690;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    cursor: none;
+  }
+
+  .cursor {
+    position: fixed; width: 16px; height: 16px;
+    border: 2px solid var(--green); border-radius: 50%;
+    pointer-events: none; z-index: 9999;
+    transform: translate(-50%, -50%); mix-blend-mode: screen;
+  }
+
+  body::after {
+    content: ''; position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
+    pointer-events: none; z-index: 100;
+  }
+
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
+    background-size: 48px 48px; pointer-events: none; z-index: 0;
+  }
+
+  #header {
+    position: fixed; top: 0; left: 0; right: 0; height: 52px;
+    background: rgba(10,10,15,0.97); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px; z-index: 50;
+  }
+  .logo { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 0.95rem; color: var(--green); letter-spacing: 0.12em; text-shadow: 0 0 20px var(--green); }
+  .slide-counter { font-size: 0.78rem; color: var(--dim); letter-spacing: 0.1em; }
+  .slide-counter b { color: var(--yellow); }
+
+  #progress-bar {
+    position: fixed; top: 51px; left: 0; height: 2px;
+    background: linear-gradient(90deg, var(--green), var(--cyan));
+    transition: width 0.4s ease; z-index: 51; box-shadow: 0 0 10px var(--green);
+  }
+
+  #slides { position: fixed; inset: 0; z-index: 10; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 64px 52px 68px; gap: 18px;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+  }
+  .slide.active { opacity: 1; pointer-events: all; }
+  .slide.active > * { animation: slideUp 0.4s ease both; }
+  .slide.active > *:nth-child(2) { animation-delay: 0.05s; }
+  .slide.active > *:nth-child(3) { animation-delay: 0.10s; }
+  .slide.active > *:nth-child(4) { animation-delay: 0.15s; }
+  .slide.active > *:nth-child(5) { animation-delay: 0.20s; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+  .section-tag {
+    font-size: 0.85rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--dim);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-tag::before, .section-tag::after { content: ''; height: 1px; width: 36px; background: var(--border); }
+
+  h1 { font-family: 'Orbitron', sans-serif; font-size: clamp(2.8rem, 6vw, 4.8rem); font-weight: 900; line-height: 1.1; text-align: center; color: #fff; }
+  h1 .hl-green  { color: var(--green);  text-shadow: 0 0 30px var(--green); }
+  h1 .hl-cyan   { color: var(--cyan);   text-shadow: 0 0 30px var(--cyan);  }
+  h1 .hl-yellow { color: var(--yellow); text-shadow: 0 0 30px var(--yellow);}
+  h1 .hl-red    { color: var(--red);    text-shadow: 0 0 30px var(--red);   }
+  h1 .hl-purple { color: var(--purple); text-shadow: 0 0 30px var(--purple);}
+  h2 { font-family: 'Orbitron', sans-serif; font-size: clamp(1.7rem, 3.2vw, 2.6rem); font-weight: 700; color: var(--cyan); text-align: center; }
+
+  .subtitle { font-size: clamp(1.1rem, 2vw, 1.4rem); color: var(--dim); text-align: center; max-width: 680px; line-height: 1.7; }
+
+  .cards-grid { display: grid; gap: 16px; width: 100%; max-width: 960px; }
+  .cards-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .cards-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 24px 26px; position: relative; overflow: hidden; transition: transform 0.2s;
+  }
+  .card:hover { transform: translateY(-2px); }
+  .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .card.green::before  { background: var(--green);  }
+  .card.cyan::before   { background: var(--cyan);   }
+  .card.yellow::before { background: var(--yellow); }
+  .card.red::before    { background: var(--red);    }
+  .card.purple::before { background: var(--purple); }
+  .card.orange::before { background: var(--orange); }
+  .card-icon { font-size: 2.2rem; margin-bottom: 10px; display: block; }
+  .card-title { font-family: 'Orbitron', sans-serif; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; }
+  .card.green  .card-title { color: var(--green);  }
+  .card.cyan   .card-title { color: var(--cyan);   }
+  .card.yellow .card-title { color: var(--yellow); }
+  .card.red    .card-title { color: var(--red);    }
+  .card.purple .card-title { color: var(--purple); }
+  .card.orange .card-title { color: var(--orange); }
+  .card-text { font-size: 1.05rem; color: var(--dim); line-height: 1.7; }
+
+  .badge {
+    display: inline-block; font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 4px; font-family: 'Orbitron', sans-serif; font-weight: 700;
+  }
+  .badge.green  { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+  .badge.yellow { background: rgba(255,230,0,0.1); color: var(--yellow); border: 1px solid rgba(255,230,0,0.3); }
+  .badge.red    { background: rgba(255,51,102,0.1); color: var(--red); border: 1px solid rgba(255,51,102,0.3); }
+  .badge.cyan   { background: rgba(0,229,255,0.1); color: var(--cyan); border: 1px solid rgba(0,229,255,0.3); }
+  .badge.purple { background: rgba(191,0,255,0.1); color: var(--purple); border: 1px solid rgba(191,0,255,0.3); }
+  .badge.orange { background: rgba(255,149,0,0.1); color: var(--orange); border: 1px solid rgba(255,149,0,0.3); }
+
+  .alert { padding: 16px 24px; border-radius: 10px; font-size: 1.05rem; max-width: 860px; width: 100%; line-height: 1.65; }
+  .alert.warn    { background: rgba(255,230,0,0.07);   border: 1px solid rgba(255,230,0,0.3);   color: var(--yellow); }
+  .alert.info    { background: rgba(0,229,255,0.07);   border: 1px solid rgba(0,229,255,0.2);   color: var(--cyan);   }
+  .alert.success { background: rgba(0,255,136,0.07);   border: 1px solid rgba(0,255,136,0.2);   color: var(--green);  }
+
+  .steps { display: flex; align-items: center; gap: 0; max-width: 900px; width: 100%; }
+  .step { flex: 1; text-align: center; padding: 20px 12px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; }
+  .step-num { font-family: 'Orbitron', sans-serif; font-size: 1.8rem; font-weight: 900; color: var(--green); display: block; margin-bottom: 8px; text-shadow: 0 0 20px var(--green); }
+  .step-label { font-size: 1.05rem; color: var(--dim); line-height: 1.5; }
+  .step-arrow { color: var(--dim); font-size: 1.4rem; flex-shrink: 0; padding: 0 8px; }
+
+  .db-table { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; width: 100%; max-width: 820px; border-collapse: collapse; }
+  .db-table th { background: rgba(0,229,255,0.08); color: var(--cyan); font-family: 'Orbitron', sans-serif; font-size: 0.92rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 15px 20px; border-bottom: 1px solid var(--border); text-align: left; }
+  .db-table td { padding: 13px 20px; font-size: 1.05rem; border-bottom: 1px solid var(--border); color: var(--text); }
+  .db-table tr:last-child td { border-bottom: none; }
+  .db-table td .pk   { color: var(--yellow); font-weight: bold; }
+  .db-table td .type { color: var(--purple); }
+  .db-table td .nn   { color: var(--red); font-size: 0.95rem; }
+  .db-table td .bool { color: var(--green); }
+  .db-table td .date { color: var(--cyan); }
+
+  .code-block {
+    background: #07070f; border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px 26px; font-size: clamp(0.95rem, 1.3vw, 1.1rem); line-height: 1.85;
+    color: #c8c8e0; width: 100%; max-width: 860px; text-align: left;
+  }
+  .code-block .bar { display: flex; gap: 6px; margin-bottom: 14px; }
+  .code-block .bar span { width: 11px; height: 11px; border-radius: 50%; }
+  .code-block .bar .r { background: #ff5f57; }
+  .code-block .bar .y { background: #febc2e; }
+  .code-block .bar .g { background: #28c840; }
+  .code-block .fn  { color: #00e5ff; }
+  .code-block .kw  { color: #bf00ff; }
+  .code-block .str { color: #00ff88; }
+  .code-block .num { color: #ffe600; }
+  .code-block .cm  { color: #444465; font-style: italic; }
+  .code-block .cls { color: #ff9500; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%; max-width: 960px; align-items: start; }
+
+  .bullet-list { list-style: none; font-size: 1.05rem; line-height: 1.8; color: var(--text); }
+  .bullet-list li::before { content: '▸ '; color: var(--green); }
+  .bullet-list li { margin-bottom: 6px; }
+
+  .blink { animation: blink 1s step-end infinite; color: var(--green); }
+  @keyframes blink { 50% { opacity: 0; } }
+  .pulse-glow { animation: pulseGlow 2.5s ease-in-out infinite; }
+  @keyframes pulseGlow { 0%, 100% { text-shadow: 0 0 20px currentColor; } 50% { text-shadow: 0 0 60px currentColor, 0 0 100px currentColor; } }
+
+  .cover-decorations { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .corner { position: absolute; width: 110px; height: 110px; border-color: var(--green); border-style: solid; opacity: 0.18; }
+  .corner.tl { top: 60px;  left: 18px;  border-width: 2px 0 0 2px; }
+  .corner.tr { top: 60px;  right: 18px; border-width: 2px 2px 0 0; }
+  .corner.bl { bottom: 18px; left: 18px;  border-width: 0 0 2px 2px; }
+  .corner.br { bottom: 18px; right: 18px; border-width: 0 2px 2px 0; }
+  .floating-icons { position: absolute; font-size: 5rem; opacity: 0.04; user-select: none; }
+  .fi1 { top: 15%; left: 5%; animation: float1 6s ease-in-out infinite; }
+  .fi2 { top: 60%; right: 6%; animation: float1 8s ease-in-out infinite reverse; }
+  .fi3 { bottom: 15%; left: 12%; animation: float1 7s ease-in-out infinite 2s; }
+  @keyframes float1 { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-18px) rotate(5deg); } }
+
+  .arch { display: flex; align-items: center; gap: 10px; max-width: 920px; width: 100%; justify-content: center; }
+  .arch-box { min-width: 140px; padding: 18px 14px; border-radius: 10px; text-align: center; border: 1px solid; flex-shrink: 0; }
+  .arch-box .ab-icon  { font-size: 2rem; margin-bottom: 8px; display: block; }
+  .arch-box .ab-title { font-family: 'Orbitron', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .arch-box .ab-sub { font-size: 0.92rem; color: var(--dim); }
+  .arch-box.java   { background: rgba(255,149,0,0.08);  border-color: rgba(255,149,0,0.3);  } .arch-box.java   .ab-title { color: var(--orange); }
+  .arch-box.jdbc   { background: rgba(191,0,255,0.08);  border-color: rgba(191,0,255,0.3);  } .arch-box.jdbc   .ab-title { color: var(--purple); }
+  .arch-box.driver { background: rgba(0,229,255,0.08);  border-color: rgba(0,229,255,0.3);  } .arch-box.driver .ab-title { color: var(--cyan);   }
+  .arch-box.oracle { background: rgba(255,51,102,0.08); border-color: rgba(255,51,102,0.3); } .arch-box.oracle .ab-title { color: var(--red);    }
+  .arch-arrow { color: var(--dim); font-size: 1.4rem; flex-shrink: 0; }
+
+  /* JDBC INTERFACES */
+  .jdbc-interfaces { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; max-width: 940px; width: 100%; }
+  .jdbc-iface {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 22px 16px; text-align: center; position: relative; overflow: hidden;
+  }
+  .jdbc-iface::before { content: 'INTERFACE'; position: absolute; top: 8px; right: 10px; font-size: 0.6rem; letter-spacing: 0.12em; color: var(--dim); font-family: 'Orbitron', sans-serif; }
+  .jdbc-iface .ji-icon  { font-size: 2.2rem; margin-bottom: 10px; display: block; }
+  .jdbc-iface .ji-name  { font-family: 'Orbitron', sans-serif; font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+  .jdbc-iface .ji-desc  { font-size: 0.95rem; color: var(--dim); line-height: 1.6; }
+  .jdbc-iface .ji-method { margin-top: 10px; font-size: 0.88rem; color: var(--cyan); background: rgba(0,229,255,0.06); border: 1px solid rgba(0,229,255,0.15); border-radius: 4px; padding: 5px 10px; display: inline-block; }
+  .jdbc-iface.c1 { border-top: 2px solid var(--purple); } .jdbc-iface.c1 .ji-name { color: var(--purple); }
+  .jdbc-iface.c2 { border-top: 2px solid var(--cyan);   } .jdbc-iface.c2 .ji-name { color: var(--cyan);   }
+  .jdbc-iface.c3 { border-top: 2px solid var(--green);  } .jdbc-iface.c3 .ji-name { color: var(--green);  }
+  .jdbc-iface.c4 { border-top: 2px solid var(--yellow); } .jdbc-iface.c4 .ji-name { color: var(--yellow); }
+
+  /* CRUD */
+  .crud-row { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; }
+  .crud-item { width: 130px; text-align: center; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 22px 8px 18px; position: relative; overflow: hidden; }
+  .crud-item .letter { font-family: 'Orbitron', sans-serif; font-size: 2.4rem; font-weight: 900; display: block; margin-bottom: 6px; }
+  .crud-item .word   { font-size: 0.95rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); display: block; margin-bottom: 4px; }
+  .crud-item .sql    { font-size: 1rem; opacity: 0.7; }
+  .crud-item::after  { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .crud-item.c .letter { color: var(--green);  } .crud-item.c::after { background: var(--green);  }
+  .crud-item.r .letter { color: var(--cyan);   } .crud-item.r::after { background: var(--cyan);   }
+  .crud-item.u .letter { color: var(--yellow); } .crud-item.u::after { background: var(--yellow); }
+  .crud-item.d .letter { color: var(--red);    } .crud-item.d::after { background: var(--red);    }
+
+  /* MAVEN */
+  .mvn-link { display: inline-flex; align-items: center; gap: 10px; background: rgba(0,229,255,0.07); border: 1px solid rgba(0,229,255,0.3); border-radius: 10px; padding: 16px 28px; color: var(--cyan); text-decoration: none; font-size: 1.15rem; transition: background 0.2s; cursor: pointer; }
+  .mvn-link:hover { background: rgba(0,229,255,0.14); }
+  .maven-logo { font-family: 'Orbitron', sans-serif; font-size: 3rem; font-weight: 900; background: linear-gradient(135deg, #d04040, #f05050); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: 0.06em; }
+  .maven-logo-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; background: rgba(208,64,64,0.06); border: 1px solid rgba(208,64,64,0.2); border-radius: 14px; padding: 24px 44px; }
+  .maven-logo-wrap .tagline { font-size: 0.95rem; color: var(--dim); letter-spacing: 0.12em; }
+
+  /* LAYER DIAGRAM */
+  .layer-diagram { display: flex; flex-direction: column; align-items: center; gap: 0; width: 100%; max-width: 620px; }
+  .layer { width: 100%; padding: 15px 20px; display: flex; align-items: center; gap: 14px; border: 1px solid; position: relative; }
+  .layer:first-child { border-radius: 10px 10px 0 0; }
+  .layer:last-child  { border-radius: 0 0 10px 10px; }
+  .layer-icon { font-size: 1.8rem; flex-shrink: 0; }
+  .layer-info { flex: 1; }
+  .layer-name { font-family: 'Orbitron', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px; }
+  .layer-desc { font-size: 0.92rem; color: var(--dim); }
+  .layer-tag  { font-size: 0.78rem; letter-spacing: 0.1em; padding: 4px 11px; border-radius: 4px; font-family: 'Orbitron', sans-serif; flex-shrink: 0; }
+  .layer.lv { background: rgba(0,229,255,0.06);  border-color: rgba(0,229,255,0.25);  } .layer.lv .layer-name { color: var(--cyan);   } .layer.lv .layer-tag { background: rgba(0,229,255,0.1); color: var(--cyan);   border: 1px solid rgba(0,229,255,0.3); }
+  .layer.ld { background: rgba(0,255,136,0.06);  border-color: rgba(0,255,136,0.25);  } .layer.ld .layer-name { color: var(--green);  } .layer.ld .layer-tag { background: rgba(0,255,136,0.1); color: var(--green);  border: 1px solid rgba(0,255,136,0.3); }
+  .layer.lf { background: rgba(255,149,0,0.06);  border-color: rgba(255,149,0,0.25);  } .layer.lf .layer-name { color: var(--orange); } .layer.lf .layer-tag { background: rgba(255,149,0,0.1); color: var(--orange); border: 1px solid rgba(255,149,0,0.3); }
+  .layer.lm { background: rgba(191,0,255,0.06);  border-color: rgba(191,0,255,0.25);  } .layer.lm .layer-name { color: var(--purple); } .layer.lm .layer-tag { background: rgba(191,0,255,0.1); color: var(--purple); border: 1px solid rgba(191,0,255,0.3); }
+  .layer.lb { background: rgba(255,51,102,0.06); border-color: rgba(255,51,102,0.25); } .layer.lb .layer-name { color: var(--red);    } .layer.lb .layer-tag { background: rgba(255,51,102,0.1); color: var(--red);    border: 1px solid rgba(255,51,102,0.3); }
+  .layer-connector { width: 2px; height: 16px; background: rgba(255,255,255,0.08); align-self: center; }
+
+  /* BOTTOM NAV */
+  #bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 52px; background: rgba(10,10,15,0.97); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 50; gap: 16px; }
+  .nav-btn { background: var(--card); border: 1px solid var(--border); color: var(--text); font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; padding: 9px 24px; border-radius: 6px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; user-select: none; }
+  .nav-btn:hover { background: rgba(0,255,136,0.1); border-color: var(--green); color: var(--green); }
+  .nav-btn:active { transform: scale(0.97); }
+  .nav-btn.next { background: rgba(0,255,136,0.08); border-color: rgba(0,255,136,0.4); color: var(--green); }
+  .nav-btn.next:hover { background: rgba(0,255,136,0.2); }
+  #dots { display: flex; gap: 8px; align-items: center; flex: 1; justify-content: center; flex-wrap: wrap; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); border: 1px solid var(--dim); cursor: pointer; transition: all 0.25s; }
+  .dot.active { background: var(--green); box-shadow: 0 0 8px var(--green); transform: scale(1.45); }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+
+<div id="header">
+  <div class="logo">JAVA<span style="color:var(--cyan)">.</span>DB &nbsp;<span style="opacity:0.4">|</span>&nbsp; <span style="color:var(--yellow)">🎮 GAMES</span></div>
+  <div class="slide-counter">SLIDE <b id="cur">01</b> / <b id="tot">10</b></div>
+  <div style="font-size:0.72rem;color:var(--dim)">← → para navegar</div>
+</div>
+<div id="progress-bar"></div>
+
+<div id="slides">
+
+  <!-- S0 — CAPA -->
+  <div class="slide active">
+    <div class="cover-decorations">
+      <div class="corner tl"></div><div class="corner tr"></div>
+      <div class="corner bl"></div><div class="corner br"></div>
+      <div class="floating-icons fi1">🕹️</div>
+      <div class="floating-icons fi2">🎮</div>
+      <div class="floating-icons fi3">🗄️</div>
+    </div>
+    <div class="section-tag">Análise e Desenvolvimento de Sistemas • FIAP</div>
+    <h1 class="pulse-glow">BANCO DE DADOS<br><span class="hl-green">EM JAVA</span></h1>
+    <p class="subtitle">Construindo um sistema de <span style="color:var(--yellow)">gerenciamento de games</span> do zero,<br>com JDBC, padrão DAO, Factory e boas práticas.</p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+      <span class="badge green">JDBC</span>
+      <span class="badge purple">DAO Pattern</span>
+      <span class="badge cyan">Oracle DB</span>
+      <span class="badge yellow">Maven</span>
+      <span class="badge orange">Factory Pattern</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:28px;margin-top:8px;flex-wrap:wrap;justify-content:center;">
+      <div style="font-size:1rem;color:var(--dim)">$ <span class="blink">_</span></div>
+      <div style="font-size:0.95rem;color:var(--dim);display:flex;align-items:center;gap:10px">
+        <span style="color:var(--border)">|</span>
+        <span style="color:var(--dim)">📅</span>
+        <span id="live-date" style="color:var(--cyan);letter-spacing:0.06em"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- S1 — POR QUE BANCO? -->
+  <div class="slide">
+    <div class="section-tag">o problema</div>
+    <h1>POR QUE <span class="hl-red">BANCO</span><br>DE DADOS?</h1>
+    <div class="cards-grid cols-2" style="max-width:780px">
+      <div class="card red">
+        <span class="card-icon">💥</span>
+        <div class="card-title">O Problema</div>
+        <p class="card-text">Variáveis e objetos Java ficam na <strong style="color:var(--red)">memória RAM</strong> — volátil! Ao encerrar o programa, tudo se perde. Nossa lista de games sumiria!</p>
+      </div>
+      <div class="card green">
+        <span class="card-icon">🗄️</span>
+        <div class="card-title">A Solução</div>
+        <p class="card-text">O <strong style="color:var(--green)">banco de dados</strong> persiste as informações permanentemente, permite consultas, relatórios e modificação dos dados com segurança.</p>
+      </div>
+    </div>
+    <div class="alert info">💡 Imagine salvar toda a sua biblioteca de games — sem banco de dados, ao fechar o programa: <strong>puf!</strong> Tudo vai embora.</div>
+  </div>
+
+  <!-- S2 — OBJETIVO DA LIVE -->
+  <div class="slide">
+    <div class="section-tag">objetivo de hoje</div>
+    <h2>🎯 O Que Vamos Construir Hoje</h2>
+    <div style="display:flex;gap:20px;max-width:960px;width:100%;align-items:flex-start">
+
+      <!-- Lado esquerdo: objetivo -->
+      <div style="flex:1;display:flex;flex-direction:column;gap:14px">
+        <div class="card green">
+          <span class="card-icon">🏗️</span>
+          <div class="card-title">Projeto Prático</div>
+          <p class="card-text">Vamos construir do zero um sistema completo de <strong style="color:var(--green)">gerenciamento de games</strong> em Java, conectado ao banco Oracle, com operações de cadastro, consulta, atualização e remoção.</p>
+        </div>
+        <div class="card cyan">
+          <span class="card-icon">📦</span>
+          <div class="card-title">Estrutura do Projeto</div>
+          <p class="card-text" style="line-height:1.9">
+            <span style="color:var(--yellow)">factory/</span> → ConnectionFactory<br>
+            <span style="color:var(--purple)">model/</span> → Game.java<br>
+            <span style="color:var(--green)">dao/</span> → GameDao.java<br>
+            <span style="color:var(--cyan)">view/</span> → GameView.java<br>
+            <span style="color:var(--dim)">exception/</span> → GameNaoEncontradoException
+          </p>
+        </div>
+      </div>
+
+      <!-- Lado direito: roadmap da live -->
+      <div style="flex:1;display:flex;flex-direction:column;gap:0">
+        <p style="font-size:1rem;color:var(--dim);text-align:center;margin-bottom:8px">🗺️ Roteiro da live</p>
+        <div class="layer-diagram" style="max-width:100%">
+          <div class="layer" style="background:rgba(255,149,0,0.06);border-color:rgba(255,149,0,0.25)">
+            <span class="layer-icon">⚙️</span>
+            <div class="layer-info">
+              <div class="layer-name" style="color:var(--orange)">1. Setup Maven</div>
+              <div class="layer-desc">Criar projeto + dependência ojdbc11</div>
+            </div>
+            <span style="font-size:0.78rem;color:var(--orange);background:rgba(255,149,0,0.1);border:1px solid rgba(255,149,0,0.3);border-radius:4px;padding:4px 10px;font-family:'Orbitron',sans-serif;flex-shrink:0">pom.xml</span>
+          </div>
+          <div class="layer-connector"></div>
+          <div class="layer" style="background:rgba(255,51,102,0.06);border-color:rgba(255,51,102,0.25)">
+            <span class="layer-icon">🏛️</span>
+            <div class="layer-info">
+              <div class="layer-name" style="color:var(--red)">2. Banco de Dados</div>
+              <div class="layer-desc">CREATE TABLE tb_game + SEQUENCE</div>
+            </div>
+            <span style="font-size:0.78rem;color:var(--red);background:rgba(255,51,102,0.1);border:1px solid rgba(255,51,102,0.3);border-radius:4px;padding:4px 10px;font-family:'Orbitron',sans-serif;flex-shrink:0">DDL</span>
+          </div>
+          <div class="layer-connector"></div>
+          <div class="layer" style="background:rgba(255,149,0,0.06);border-color:rgba(255,149,0,0.25)">
+            <span class="layer-icon">🏭</span>
+            <div class="layer-info">
+              <div class="layer-name" style="color:var(--orange)">3. ConnectionFactory</div>
+              <div class="layer-desc">Padrão Factory — conexão centralizada</div>
+            </div>
+            <span style="font-size:0.78rem;color:var(--orange);background:rgba(255,149,0,0.1);border:1px solid rgba(255,149,0,0.3);border-radius:4px;padding:4px 10px;font-family:'Orbitron',sans-serif;flex-shrink:0">factory</span>
+          </div>
+          <div class="layer-connector"></div>
+          <div class="layer" style="background:rgba(191,0,255,0.06);border-color:rgba(191,0,255,0.25)">
+            <span class="layer-icon">📦</span>
+            <div class="layer-info">
+              <div class="layer-name" style="color:var(--purple)">4. Model Game</div>
+              <div class="layer-desc">Classe Java que representa a tabela</div>
+            </div>
+            <span style="font-size:0.78rem;color:var(--purple);background:rgba(191,0,255,0.1);border:1px solid rgba(191,0,255,0.3);border-radius:4px;padding:4px 10px;font-family:'Orbitron',sans-serif;flex-shrink:0">model</span>
+          </div>
+          <div class="layer-connector"></div>
+          <div class="layer" style="background:rgba(0,255,136,0.06);border-color:rgba(0,255,136,0.25)">
+            <span class="layer-icon">🗃️</span>
+            <div class="layer-info">
+              <div class="layer-name" style="color:var(--green)">5. GameDao — CRUD</div>
+              <div class="layer-desc">INSERT · SELECT · UPDATE · DELETE</div>
+            </div>
+            <span style="font-size:0.78rem;color:var(--green);background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);border-radius:4px;padding:4px 10px;font-family:'Orbitron',sans-serif;flex-shrink:0">dao</span>
+          </div>
+          <div class="layer-connector"></div>
+          <div class="layer" style="background:rgba(0,229,255,0.06);border-color:rgba(0,229,255,0.25)">
+            <span class="layer-icon">🖥️</span>
+            <div class="layer-info">
+              <div class="layer-name" style="color:var(--cyan)">6. GameView — Menu</div>
+              <div class="layer-desc">Interface de texto para o usuário</div>
+            </div>
+            <span style="font-size:0.78rem;color:var(--cyan);background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.3);border-radius:4px;padding:4px 10px;font-family:'Orbitron',sans-serif;flex-shrink:0">view</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- S3 (ex-S2) — JDBC -->
+  <div class="slide">
+    <div class="section-tag">fundamentos</div>
+    <h1>JDBC <span class="hl-cyan">—</span></h1>
+    <p style="font-size:1.15rem;color:var(--dim);margin-top:-10px">Java DataBase Connectivity</p>
+    <div class="arch">
+      <div class="arch-box java"><span class="ab-icon">☕</span><div class="ab-title">Projeto Java</div><div class="ab-sub">nosso código</div></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box jdbc"><span class="ab-icon">🔌</span><div class="ab-title">Interface JDBC</div><div class="ab-sub">java.sql.*</div></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box driver"><span class="ab-icon">⚙️</span><div class="ab-title">Driver Oracle</div><div class="ab-sub">ojdbc8.jar</div></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box oracle"><span class="ab-icon">🏛️</span><div class="ab-title">Oracle DB</div><div class="ab-sub">FIAP</div></div>
+    </div>
+    <div class="alert info" style="max-width:780px">🎮 O JDBC é como o <strong>adaptador de controle universal</strong> — você usa sempre os mesmos métodos, independente do banco. Se trocar de banco, só muda o <strong>driver</strong>!</div>
+  </div>
+
+  <!-- S3 — MAVEN -->
+  <div class="slide">
+    <div class="section-tag">setup do projeto</div>
+    <h2>⚙️ Maven — Gerenciador de Dependências</h2>
+    <div class="two-col" style="max-width:860px">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px">
+        <div class="maven-logo-wrap">
+          <div class="maven-logo">Maven</div>
+          <div class="tagline">Apache Software Foundation</div>
+        </div>
+        <div class="alert info" style="font-size:1.05rem">
+          📦 O Maven é como a <strong>loja de itens</strong> do game: você diz o que precisa no <code>pom.xml</code> e ele baixa tudo automaticamente — sem copiar arquivos .jar na mão!
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card orange">
+          <span class="card-icon">📄</span>
+          <div class="card-title">pom.xml</div>
+          <p class="card-text">Arquivo central do projeto Maven. Aqui declaramos as <strong style="color:var(--yellow)">dependências</strong> necessárias — incluindo o driver JDBC do Oracle.</p>
+        </div>
+        <div style="text-align:center">
+          <p style="font-size:1.05rem;color:var(--dim);margin-bottom:12px">🔍 Vamos buscar a dependência juntos:</p>
+          <a class="mvn-link" href="https://mvnrepository.com/artifact/com.oracle.database.jdbc/ojdbc11" target="_blank">🌐 &nbsp;mvnrepository.com → ojdbc11</a>
+        </div>
+        <div class="alert success" style="font-size:1rem">✅ Após adicionar ao <code>pom.xml</code>, o Maven baixa o driver automaticamente!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S4 — TABELA -->
+  <div class="slide">
+    <div class="section-tag">modelagem</div>
+    <h2>🎮 Tabela TB_GAME + Sequence</h2>
+    <table class="db-table">
+      <thead><tr><th>Coluna</th><th>Tipo</th><th>Restrição</th><th>Descrição</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pk">🔑 CD_GAME</span></td><td><span class="type">NUMBER(5)</span></td><td><span class="nn">PK — seq_game</span></td><td>Gerado pela sequence automaticamente</td></tr>
+        <tr><td>NM_GAME</td><td><span class="type">VARCHAR2(100)</span></td><td><span class="nn">NOT NULL</span></td><td>Nome do game</td></tr>
+        <tr><td>NR_NOTA</td><td><span class="type">NUMBER(3,1)</span></td><td>—</td><td>Nota de 0.0 a 10.0</td></tr>
+        <tr><td>NR_ANO</td><td><span class="type">NUMBER(4)</span></td><td>—</td><td>Ano de lançamento</td></tr>
+        <tr><td><span class="date">DT_COMPRA</span></td><td><span class="type date">DATE</span></td><td>—</td><td>Data em que comprou o game</td></tr>
+        <tr><td><span class="bool">ST_FINALIZADO</span></td><td><span class="type bool">NUMBER(1)</span></td><td>DEFAULT 0</td><td>0 = não finalizado / 1 = finalizado ✅</td></tr>
+      </tbody>
+    </table>
+    <div class="code-block" style="max-width:820px;font-size:1rem">
+      <div class="bar"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+<span class="kw">CREATE SEQUENCE</span> <span class="fn">seq_game</span> <span class="kw">START WITH</span> <span class="num">1</span> <span class="kw">INCREMENT BY</span> <span class="num">1</span>;
+
+<span class="kw">CREATE TABLE</span> <span class="cls">tb_game</span> (
+  cd_game       <span class="kw">NUMBER(5)     PRIMARY KEY</span>,
+  nm_game       <span class="kw">VARCHAR2(100) NOT NULL</span>,
+  nr_nota       <span class="kw">NUMBER(3,1)</span>,
+  nr_ano        <span class="kw">NUMBER(4)</span>,
+  dt_compra     <span class="kw">DATE</span>,
+  st_finalizado <span class="kw">NUMBER(1) DEFAULT</span> <span class="num">0</span>
+);</div>
+  </div>
+
+  <!-- S5 — CONNECTION FACTORY -->
+  <div class="slide">
+    <div class="section-tag">padrão de projeto</div>
+    <h2>🏭 Padrão Factory — ConnectionFactory</h2>
+    <div class="two-col" style="max-width:940px">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card orange">
+          <span class="card-icon">🏭</span>
+          <div class="card-title">O que é Factory?</div>
+          <p class="card-text">É um padrão de projeto que <strong style="color:var(--yellow)">centraliza a criação de objetos</strong>. Em vez de cada classe criar sua própria conexão, todas pedem à <strong style="color:var(--orange)">fábrica</strong> — uma fonte única e confiável.</p>
+        </div>
+        <div class="card green">
+          <span class="card-icon">✅</span>
+          <div class="card-title">Por que usar?</div>
+          <p class="card-text">Se a URL, usuário ou senha mudar, você corrige em <strong style="color:var(--green)">um único lugar</strong>. Sem precisar caçar 10 classes diferentes com código duplicado.</p>
+        </div>
+        <div class="alert info" style="font-size:1rem">🎮 Pense como o <strong>servidor central do MMO</strong> — todos os jogadores (classes) se conectam pelo mesmo ponto.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <p style="font-size:1rem;color:var(--dim);text-align:center">📐 Onde a Factory se encaixa</p>
+        <div class="layer-diagram">
+          <div class="layer lv"><span class="layer-icon">🖥️</span><div class="layer-info"><div class="layer-name">View / GameView</div><div class="layer-desc">Interface com o usuário</div></div><span class="layer-tag">view</span></div>
+          <div class="layer-connector"></div>
+          <div class="layer lm"><span class="layer-icon">📦</span><div class="layer-info"><div class="layer-name">Model / Game.java</div><div class="layer-desc">Transporta os dados</div></div><span class="layer-tag">model</span></div>
+          <div class="layer-connector"></div>
+          <div class="layer ld"><span class="layer-icon">🗃️</span><div class="layer-info"><div class="layer-name">DAO / GameDao</div><div class="layer-desc">Operações no banco</div></div><span class="layer-tag">dao</span></div>
+          <div class="layer-connector"></div>
+          <div class="layer lf" style="border:2px solid rgba(255,149,0,0.55)"><span class="layer-icon">🏭</span><div class="layer-info"><div class="layer-name">ConnectionFactory</div><div class="layer-desc">Cria e entrega a conexão</div></div><span class="layer-tag" style="font-size:0.82rem">factory ★</span></div>
+          <div class="layer-connector"></div>
+          <div class="layer lb"><span class="layer-icon">🏛️</span><div class="layer-info"><div class="layer-name">Oracle DB</div><div class="layer-desc">Banco de dados</div></div><span class="layer-tag">db</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S6 — MODEL -->
+  <div class="slide">
+    <div class="section-tag">orientação a objetos</div>
+    <h2>🎲 Model — A Classe Game</h2>
+    <div class="two-col" style="max-width:940px">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card purple">
+          <span class="card-icon">📦</span>
+          <div class="card-title">O que é o Model?</div>
+          <p class="card-text">É a <strong style="color:var(--purple)">representação em Java</strong> da tabela do banco. Cada <em>coluna</em> da tabela vira um <em>atributo</em> da classe — é o objeto que transporta os dados entre todas as camadas.</p>
+        </div>
+        <div class="card cyan">
+          <span class="card-icon">🔗</span>
+          <div class="card-title">Tabela ↔ Classe Java</div>
+          <p class="card-text" style="line-height:2">
+            <span style="color:var(--yellow)">tb_game</span> &nbsp;→&nbsp; <span style="color:var(--cyan)">class Game</span><br>
+            <span style="color:var(--yellow)">cd_game</span> &nbsp;→&nbsp; <span style="color:var(--cyan)">Long codigo</span><br>
+            <span style="color:var(--yellow)">nm_game</span> &nbsp;→&nbsp; <span style="color:var(--cyan)">String nome</span><br>
+            <span style="color:var(--yellow)">dt_compra</span> &nbsp;→&nbsp; <span style="color:var(--cyan)">LocalDate dtCompra</span><br>
+            <span style="color:var(--yellow)">st_finalizado</span> &nbsp;→&nbsp; <span style="color:var(--cyan)">boolean finalizado</span>
+          </p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <p style="font-size:1rem;color:var(--dim);text-align:center">📐 O Model trafega por todas as camadas</p>
+        <div class="layer-diagram">
+          <div class="layer lv"><span class="layer-icon">🖥️</span><div class="layer-info"><div class="layer-name">View</div><div class="layer-desc">Recebe e exibe objetos Game</div></div><span class="layer-tag">view</span></div>
+          <div class="layer-connector"></div>
+          <div class="layer lm" style="border:2px solid rgba(191,0,255,0.55)"><span class="layer-icon">📦</span><div class="layer-info"><div class="layer-name">Model / Game.java</div><div class="layer-desc">Transporta dados entre camadas</div></div><span class="layer-tag" style="font-size:0.82rem">model ★</span></div>
+          <div class="layer-connector"></div>
+          <div class="layer ld"><span class="layer-icon">🗃️</span><div class="layer-info"><div class="layer-name">DAO</div><div class="layer-desc">Salva e recupera objetos Game</div></div><span class="layer-tag">dao</span></div>
+          <div class="layer-connector"></div>
+          <div class="layer lf"><span class="layer-icon">🏭</span><div class="layer-info"><div class="layer-name">ConnectionFactory</div><div class="layer-desc">Fornece a conexão</div></div><span class="layer-tag">factory</span></div>
+          <div class="layer-connector"></div>
+          <div class="layer lb"><span class="layer-icon">🏛️</span><div class="layer-info"><div class="layer-name">Banco de Dados</div><div class="layer-desc">tb_game — linhas e colunas</div></div><span class="layer-tag">db</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S7 — DAO + CRUD -->
+  <div class="slide">
+    <div class="section-tag">padrão de projeto</div>
+    <h2>🗃️ Padrão DAO + CRUD</h2>
+    <div class="two-col" style="max-width:960px">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card green">
+          <span class="card-icon">🗃️</span>
+          <div class="card-title">O que é DAO?</div>
+          <p class="card-text"><strong style="color:var(--green)">Data Access Object</strong> — isola toda a lógica de acesso ao banco em uma classe dedicada. A View não sabe como os dados são salvos; ela só pede ao DAO.</p>
+        </div>
+        <div class="crud-row" style="justify-content:flex-start;gap:10px">
+          <div class="crud-item c" style="width:104px"><span class="letter" style="font-size:1.8rem">C</span><span class="word">Create</span><span class="sql" style="color:var(--green)">INSERT</span></div>
+          <div class="crud-item r" style="width:104px"><span class="letter" style="font-size:1.8rem">R</span><span class="word">Read</span><span class="sql" style="color:var(--cyan)">SELECT</span></div>
+          <div class="crud-item u" style="width:104px"><span class="letter" style="font-size:1.8rem">U</span><span class="word">Update</span><span class="sql" style="color:var(--yellow)">UPDATE</span></div>
+          <div class="crud-item d" style="width:104px"><span class="letter" style="font-size:1.8rem">D</span><span class="word">Delete</span><span class="sql" style="color:var(--red)">DELETE</span></div>
+        </div>
+        <div class="alert info" style="font-size:1.05rem">💡 Na próxima seção veremos as <strong>interfaces JDBC</strong> que o DAO utiliza para se comunicar com o banco!</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <p style="font-size:1rem;color:var(--dim);text-align:center">📐 Visão completa das camadas</p>
+        <div class="layer-diagram">
+          <div class="layer lv"><span class="layer-icon">🖥️</span><div class="layer-info"><div class="layer-name">View / GameView</div><div class="layer-desc">Interage com o usuário</div></div><span class="layer-tag">view</span></div>
+          <div class="layer-connector"></div>
+          <div class="layer lm"><span class="layer-icon">📦</span><div class="layer-info"><div class="layer-name">Model / Game.java</div><div class="layer-desc">Transporta os dados</div></div><span class="layer-tag">model</span></div>
+          <div class="layer-connector"></div>
+          <div class="layer ld" style="border:2px solid rgba(0,255,136,0.55)"><span class="layer-icon">🗃️</span><div class="layer-info"><div class="layer-name">DAO / GameDao</div><div class="layer-desc">cadastrar · pesquisar · atualizar · remover</div></div><span class="layer-tag" style="font-size:0.82rem">dao ★</span></div>
+          <div class="layer-connector"></div>
+          <div class="layer lf"><span class="layer-icon">🏭</span><div class="layer-info"><div class="layer-name">ConnectionFactory</div><div class="layer-desc">Fornece a conexão ao DAO</div></div><span class="layer-tag">factory</span></div>
+          <div class="layer-connector"></div>
+          <div class="layer lb"><span class="layer-icon">🏛️</span><div class="layer-info"><div class="layer-name">Oracle DB</div><div class="layer-desc">tb_game</div></div><span class="layer-tag">db</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S8 — INTERFACES JDBC -->
+  <div class="slide">
+    <div class="section-tag">jdbc na prática</div>
+    <h2>🔌 As Interfaces do JDBC</h2>
+    <div class="jdbc-interfaces">
+      <div class="jdbc-iface c1">
+        <span class="ji-icon">🔑</span>
+        <div class="ji-name">DriverManager</div>
+        <div class="ji-desc">Ponto de entrada. Recebe a URL de conexão e as credenciais, retorna uma <strong>Connection</strong>.</div>
+        <span class="ji-method">getConnection(url, user, pass)</span>
+      </div>
+      <div class="jdbc-iface c2">
+        <span class="ji-icon">🔗</span>
+        <div class="ji-name">Connection</div>
+        <div class="ji-desc">Representa a sessão aberta com o banco. A partir dela criamos os statements e gerenciamos transações.</div>
+        <span class="ji-method">prepareStatement(sql)</span>
+      </div>
+      <div class="jdbc-iface c3">
+        <span class="ji-icon">🛡️</span>
+        <div class="ji-name">PreparedStatement</div>
+        <div class="ji-desc">Executa SQL parametrizado com <strong>?</strong>. Previne SQL Injection e é mais eficiente que o Statement simples.</div>
+        <span class="ji-method">setX() / executeQuery()</span>
+      </div>
+      <div class="jdbc-iface c4">
+        <span class="ji-icon">📋</span>
+        <div class="ji-name">ResultSet</div>
+        <div class="ji-desc">Cursor que percorre as linhas retornadas pelo SELECT. Acessa colunas pelo nome.</div>
+        <span class="ji-method">next() / getX("coluna")</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;max-width:940px;width:100%">
+      <div class="arch-box jdbc" style="min-width:130px;padding:14px 12px;flex-shrink:0"><span class="ab-icon" style="font-size:1.4rem">🔌</span><div class="ab-title" style="font-size:0.78rem">JDBC API</div><div class="ab-sub" style="font-size:0.82rem">java.sql.*</div></div>
+      <div style="font-size:0.95rem;color:var(--dim);flex-shrink:0">← implementado por</div>
+      <div class="arch-box driver" style="min-width:160px;padding:14px 12px;flex-shrink:0"><span class="ab-icon" style="font-size:1.4rem">⚙️</span><div class="ab-title" style="font-size:0.78rem">Driver Oracle (ojdbc11)</div><div class="ab-sub" style="font-size:0.82rem">classes concretas</div></div>
+      <div class="arch-arrow" style="font-size:1.2rem">→</div>
+      <div class="arch-box oracle" style="min-width:110px;padding:14px 12px;flex-shrink:0"><span class="ab-icon" style="font-size:1.4rem">🏛️</span><div class="ab-title" style="font-size:0.78rem">Oracle DB</div></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+        <div class="alert warn" style="font-size:1rem;margin:0">⚠️ Use sempre <strong>PreparedStatement</strong> — nunca Statement puro! Previne <strong>SQL Injection</strong>, o ataque que pode destruir seu banco.</div>
+        <div class="alert info" style="font-size:1rem;margin:0">💡 Troque para <strong>MySQL</strong>: só muda o driver no <code>pom.xml</code>. As interfaces JDBC no seu código ficam <strong>iguais</strong>!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S9 — RESUMO -->
+  <div class="slide">
+    <div class="section-tag">missão completa</div>
+    <h1><span class="hl-green">SISTEMA</span><br>CONCLUÍDO! 🏆</h1>
+    <div class="steps">
+      <div class="step"><span class="step-num">1</span><div class="step-label">Maven +<br>Driver Oracle</div></div>
+      <div class="step-arrow">→</div>
+      <div class="step"><span class="step-num">2</span><div class="step-label">Connection<br>Factory</div></div>
+      <div class="step-arrow">→</div>
+      <div class="step"><span class="step-num">3</span><div class="step-label">Model<br>Game.java</div></div>
+      <div class="step-arrow">→</div>
+      <div class="step"><span class="step-num">4</span><div class="step-label">GameDao<br>CRUD</div></div>
+      <div class="step-arrow">→</div>
+      <div class="step"><span class="step-num">5</span><div class="step-label">GameView<br>Interface</div></div>
+    </div>
+    <div class="cards-grid cols-3" style="max-width:800px">
+      <div class="card green">
+        <span class="card-icon">🛡️</span>
+        <div class="card-title">Segurança</div>
+        <p class="card-text">PreparedStatement previne SQL Injection em todas as operações</p>
+      </div>
+      <div class="card cyan">
+        <span class="card-icon">♻️</span>
+        <div class="card-title">Reutilização</div>
+        <p class="card-text">DAO separa o acesso a dados da lógica de negócio</p>
+      </div>
+      <div class="card orange">
+        <span class="card-icon">🏗️</span>
+        <div class="card-title">Organização</div>
+        <p class="card-text">Factory, Model, DAO, View — cada responsabilidade no seu lugar</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /slides -->
+
+<div id="bottom-nav">
+  <button class="nav-btn" id="btn-prev" onclick="goTo(current - 1)">← ANTERIOR</button>
+  <div id="dots"></div>
+  <button class="nav-btn next" id="btn-next" onclick="goTo(current + 1)">PRÓXIMO →</button>
+</div>
+
+<script>
+  const cursorEl = document.getElementById('cursor');
+  document.addEventListener('mousemove', e => { cursorEl.style.left = e.clientX + 'px'; cursorEl.style.top = e.clientY + 'px'; });
+
+  // Render today's date on cover
+  const dateEl = document.getElementById('live-date');
+  if (dateEl) {
+    const now = new Date();
+    const opts = { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' };
+    dateEl.textContent = now.toLocaleDateString('pt-BR', opts);
+  }
+
+  const slides = document.querySelectorAll('.slide');
+  const total  = slides.length;
+  let current  = 0;
+
+  const dotsEl = document.getElementById('dots');
+  const curEl  = document.getElementById('cur');
+  const totEl  = document.getElementById('tot');
+  const bar    = document.getElementById('progress-bar');
+
+  totEl.textContent = String(total).padStart(2, '0');
+
+  for (let i = 0; i < total; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.addEventListener('click', () => goTo(i));
+    dotsEl.appendChild(d);
+  }
+
+  function goTo(n) {
+    if (n < 0 || n >= total) return;
+    slides[current].classList.remove('active');
+    dotsEl.children[current].classList.remove('active');
+    current = n;
+    slides[current].classList.add('active');
+    dotsEl.children[current].classList.add('active');
+    curEl.textContent = String(current + 1).padStart(2, '0');
+    bar.style.width = ((current + 1) / total * 100) + '%';
+    document.getElementById('btn-prev').style.opacity = current === 0 ? '0.3' : '1';
+    document.getElementById('btn-next').style.opacity = current === total - 1 ? '0.3' : '1';
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') goTo(current + 1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp') goTo(current - 1);
+  });
+
+  let startX = 0;
+  document.addEventListener('touchstart', e => { startX = e.touches[0].clientX; });
+  document.addEventListener('touchend',   e => { const dx = e.changedTouches[0].clientX - startX; if (Math.abs(dx) > 50) goTo(current + (dx < 0 ? 1 : -1)); });
+
+  bar.style.width = (1 / total * 100) + '%';
+  document.getElementById('btn-prev').style.opacity = '0.3';
+</script>
+</body>
+</html>
