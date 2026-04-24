@@ -7,8 +7,8 @@ import java.sql.SQLException;
 public class ConnectionFactory {
 
     private static final String connectionString = "jdbc:oracle:thin:@oracle.fiap.com.br:1521:orcl";
-    private static final String user = "pf0392";
-    private static final String password = "izumi25";
+    private static final String user = "";
+    private static final String password = "";
 
     public static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(connectionString,user,password);
